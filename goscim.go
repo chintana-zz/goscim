@@ -3,95 +3,97 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/mgo.v2"
 	"net/http"
 	"os"
 	"time"
+
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type User struct {
-	Active            bool
-	Addresses         []Address
-	DisplayName       string
-	Emails            []Email
-	ExternalId        string
-	Groups            []Group
-	Id                string
-	Ims               []Im
-	Locale            string
-	Meta              MetaT
-	Name              NameT
-	NickName          string
-	Password          string
-	PhoneNumbers      []PhoneNumber
-	Photos            []Photo
-	PreferredLanguage string
-	ProfileUrl        string
-	Schemas           []string
-	TimeZone          string
-	Title             string
-	UserName          string
-	UserType          string
-	X509Certificates  []Cert
+	Active            bool          `json:"active"`
+	Addresses         []Address     `json:"addresses"`
+	DisplayName       string        `json:"displayName"`
+	Emails            []Email       `json:"emails"`
+	ExternalId        string        `json:"externalId"`
+	Groups            []Group       `json:"groups"`
+	Id                string        `json:"id"`
+	Ims               []Im          `json:"ims"`
+	Locale            string        `json:"locale"`
+	Meta              MetaT         `json:"meta"`
+	Name              NameT         `json:"name"`
+	NickName          string        `json:"nickName"`
+	Password          string        `json:"password"`
+	PhoneNumbers      []PhoneNumber `json:"phoneNumbers"`
+	Photos            []Photo       `json:"photos"`
+	PreferredLanguage string        `json:"preferredLanguage"`
+	ProfileUrl        string        `json:"profileUrl"`
+	Schemas           []string      `json:"schemas"`
+	TimeZone          string        `json:"timezone"`
+	Title             string        `json:"title"`
+	UserName          string        `json:"userName"`
+	UserType          string        `json:"userType"`
+	X509Certificates  []Cert        `json:"x509certificates"`
 }
 
 type Cert struct {
-	Value string
+	Value string `json:"value"`
 }
 
 type Photo struct {
-	Type  string
-	Value string
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 type PhoneNumber struct {
-	Type  string
-	Value string
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 type NameT struct {
-	FamilyName      string
-	Formatted       string
-	GivenName       string
-	HonorificPrefix string
-	HonorificSuffix string
-	MiddleName      string
+	FamilyName      string `json:"familyName"`
+	Formatted       string `json:"formatted"`
+	GivenName       string `json:"givenName"`
+	HonorificPrefix string `json:"honorificPrefix"`
+	HonorificSuffix string `json:"honorificSuffix"`
+	MiddleName      string `json:"middleName"`
 }
 
 type MetaT struct {
-	Created      string
-	LastModified string
-	Location     string
-	ResourceType string
-	Version      string
+	Created      string `json:"created"`
+	LastModified string `json:"lastModified"`
+	Location     string `json:"location"`
+	ResourceType string `json:"resourceType"`
+	Version      string `json:"version"`
 }
 
 type Im struct {
-	Type  string
-	Value string
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 type Group struct {
-	Ref     string
-	Dispaly string
-	Value   string
+	Ref     string `json:"ref"`
+	Dispaly string `json:"display"`
+	Value   string `json:"value"`
 }
 
 type Email struct {
-	Primary bool
-	Type    string
-	value   string
+	Primary bool   `json:"primary"`
+	Type    string `json:"type"`
+	Value   string `json:"value"`
 }
 
 type Address struct {
-	Country       string
-	Formatted     string
-	Locality      string
-	PostalCode    string
-	Primary       bool
-	Region        string
-	StreetAddress string
-	Type          string
+	Country       string `json:"country"`
+	Formatted     string `json:"formatted"`
+	Locality      string `json:"locality"`
+	PostalCode    string `json:"postalCode"`
+	Primary       bool   `json:"primary"`
+	Region        string `json:"region"`
+	StreetAddress string `json:"streetAddress"`
+	Type          string `json:"type"`
 }
 
 // Save the user to DB
@@ -126,6 +128,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	err := ud.Decode(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Generate metadata before saving
@@ -144,6 +147,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	m, err := json.Marshal(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	w.Write(m)
 }
@@ -152,7 +156,36 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 func getUser(w http.ResponseWriter, r *http.Request) {
 	// get user ID
 	userId := r.RequestURI[7:]
-	fmt.Println(userId)
+
+	fmt.Println("Getting user...")
+	session, err := mgo.Dial("127.0.0.1:27017")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer session.Close()
+
+	c := session.DB("test").C("users")
+
+	user := User{}
+	fmt.Println("Finding user...")
+	err = c.Find(bson.M{"id": userId}).One(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", "http://localhost:8080/Users/"+user.Id)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	m, err := json.Marshal(user)
+	fmt.Println("Marshalling user...")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(m)
 }
 
 func userHandler(w http.ResponseWriter, r *http.Request) {
