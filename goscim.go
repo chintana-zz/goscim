@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"bitbucket.org/chintana/goscim/types"
@@ -23,13 +25,15 @@ func (s *SCIMServer) AddUser(u *types.User) (err error) {
 
 // Get user info
 func (s *SCIMServer) GetUser(id string) (*types.User, error) {
+	log.Println("Passed user ID - ", id)
 	c := s.db.C("users")
-	var user *types.User
+	user := types.User{}
 	err := c.Find(bson.M{"id": id}).One(&user)
 	if err != nil {
 		return nil, err
 	}
-	return user, nil
+	log.Println(user)
+	return &user, nil
 }
 
 // Create a user data structure from incoming request body, then return a User struct that
@@ -71,16 +75,17 @@ type SCIMServer struct {
 func (server *SCIMServer) userHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		log.Println("inside get")
 		// Search for user ID, then return user details in JSON
-		user, err := server.GetUser(r.URL.Path)
+
+		// Passing the UUID extracted from the URL path
+		user, err := server.GetUser(r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		var data []byte
-		err = json.Unmarshal(data, user)
+		data, err = json.Marshal(user)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Location", "http://localhost:8181/Users/"+user.Id)
@@ -149,18 +154,16 @@ func (s *SCIMServer) bulkHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *SCIMServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("inside server")
-	switch r.URL.Path {
-	case "/Users/":
-		log.Println("matched Users")
+	switch {
+	case regexp.MustCompile("^/Users").MatchString(r.URL.Path):
 		s.userHandler(w, r)
-	case "/Groups":
+	case regexp.MustCompile("^/Groups").MatchString(r.URL.Path):
 		s.groupHandler(w, r)
-	case "/ServiceProviderConfigs":
+	case regexp.MustCompile("^/ServiceProviderConfigs").MatchString(r.URL.Path):
 		s.spConfigHandler(w, r)
-	case "/Schemas":
+	case regexp.MustCompile("^/Schemas").MatchString(r.URL.Path):
 		s.schemaHandler(w, r)
-	case "/Bulk":
+	case regexp.MustCompile("^/Bulk").MatchString(r.URL.Path):
 		s.bulkHandler(w, r)
 	}
 
