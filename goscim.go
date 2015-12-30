@@ -17,35 +17,60 @@ import (
 )
 
 // Add user to DB and return error status
-func (s *SCIMServer) AddUser(u *types.User) (err error) {
+func (s *SCIMServer) AddUser(body io.ReadCloser) (*types.User, error) {
+	user, err := createUser("", body)
+	if err != nil {
+		return nil, err
+	}
 	c := s.db.C("users")
-	err = c.Insert(u)
-	return err
+	err = c.Insert(user)
+	return user, err
 }
 
 // Get user info
 func (s *SCIMServer) GetUser(id string) (*types.User, error) {
-	log.Println("Passed user ID - ", id)
 	c := s.db.C("users")
 	user := types.User{}
 	err := c.Find(bson.M{"id": id}).One(&user)
 	if err != nil {
 		return nil, err
 	}
-	log.Println(user)
 	return &user, nil
+}
+
+// Update user info
+func (s *SCIMServer) UpdateUser(userId string, body io.ReadCloser) (*types.User, error) {
+	user, err := createUser(userId, body)
+	if err != nil {
+		return nil, err
+	}
+	c := s.db.C("users")
+	err = c.Update(bson.M{"id": userId}, user)
+	if err != nil {
+		fmt.Println("update call error", err)
+		return nil, err
+	}
+	newUser, err := s.GetUser(userId)
+	if err != nil {
+		return nil, err
+	}
+	return newUser, nil
 }
 
 // Create a user data structure from incoming request body, then return a User struct that
 // represent incoming user info in JSON payload
-func createUser(b io.Reader) (user *types.User, err error) {
+func createUser(userId string, b io.Reader) (user *types.User, err error) {
 	user = new(types.User)
 
 	if err = json.NewDecoder(b).Decode(&user); err != nil {
 		return nil, err
 	}
 	// Generate metadata
-	user.Id = util.GetUUID()
+	if userId != "" {
+		user.Id = userId
+	} else {
+		user.Id = util.GetUUID()
+	}
 	created := time.Now()
 	user.Meta.Created = created.Format(time.RFC3339)
 	user.Meta.LastModified = user.Meta.Created
@@ -94,43 +119,36 @@ func (server *SCIMServer) userHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		// Create a new resource (user)
 		// http://www.simplecloud.info/specs/draft-scim-api-01.html#create-resource
-
-		// Quote:
-		//
-		// Successful Resource creation is indicated with a 201 ("Created") response code. Upon
-		// successful creation, the response body MUST contain the newly created Resource. Since
-		// the server is free to alter and/or ignore POSTed content, returning the full
-		// representation can be useful to the client, enabling it to correlate the client and
-		// server views of the new Resource. When a Resource is created, its URI must be returned
-		// in the response Location header.
-
-		// If the Service Provider determines creation of the requested Resource conflicts with
-		// existing resources; e.g., a User Resource with a duplicate userName, the Service Provider
-		// MUST return a 409 error and SHOULD indicate the conflicting attribute(s) in the body of
-		// the response.
-
-		user, err := createUser(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		err = server.AddUser(user)
+		user, err := server.AddUser(r.Body)
 		if err != nil {
 			// TODO: check whether it's a duplicate username and throw a 409
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		m, err := json.Marshal(user)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		w.Header().Set("Location", "http://localhost:8181/Users/"+user.Id)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		w.Write(m)
+	case "PUT":
+		// Update a user, passing user ID from URL and req body
+		user, err := server.UpdateUser(r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:], r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		m, err := json.Marshal(user)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Location", "http://localhost:8181/Users/"+user.Id)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		w.Write(m)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
