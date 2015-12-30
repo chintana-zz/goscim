@@ -47,7 +47,6 @@ func (s *SCIMServer) UpdateUser(userId string, body io.ReadCloser) (*types.User,
 	c := s.db.C("users")
 	err = c.Update(bson.M{"id": userId}, user)
 	if err != nil {
-		fmt.Println("update call error", err)
 		return nil, err
 	}
 	newUser, err := s.GetUser(userId)
@@ -55,6 +54,15 @@ func (s *SCIMServer) UpdateUser(userId string, body io.ReadCloser) (*types.User,
 		return nil, err
 	}
 	return newUser, nil
+}
+
+func (s *SCIMServer) DeleteUser(userId string) error {
+	c := s.db.C("users")
+	err := c.Remove(bson.M{"id": userId})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Create a user data structure from incoming request body, then return a User struct that
@@ -150,6 +158,13 @@ func (server *SCIMServer) userHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(m)
+	case "DELETE":
+		err := server.DeleteUser(r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
