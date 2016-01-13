@@ -7,11 +7,11 @@ type User struct {
 	DisplayName       string        `json:"displayName"`
 	Emails            []Email       `json:"emails"`
 	ExternalId        string        `json:"externalId"`
-	Groups            []Group       `json:"groups"`
+	UserGroups        []UserGroup   `json:"groups"`
 	Id                string        `json:"id"`
 	Ims               []Im          `json:"ims"`
 	Locale            string        `json:"locale"`
-	Meta              MetaT         `json:"meta"`
+	Meta              UserMetaT     `json:"meta"`
 	Name              NameT         `json:"name"`
 	NickName          string        `json:"nickName"`
 	Password          string        `json:"password"`
@@ -50,7 +50,7 @@ type NameT struct {
 	MiddleName      string `json:"middleName"`
 }
 
-type MetaT struct {
+type UserMetaT struct {
 	Created      string `json:"created"`
 	LastModified string `json:"lastModified"`
 	Location     string `json:"location"`
@@ -63,7 +63,7 @@ type Im struct {
 	Value string `json:"value"`
 }
 
-type Group struct {
+type UserGroup struct {
 	Ref     string `json:"ref"`
 	Dispaly string `json:"display"`
 	Value   string `json:"value"`
@@ -84,4 +84,27 @@ type Address struct {
 	Region        string `json:"region"`
 	StreetAddress string `json:"streetAddress"`
 	Type          string `json:"type"`
+}
+
+// Main struct for holding a group according to SCIM spec 2.0
+type Group struct {
+	Schemas     []string `json:"schemas"`
+	Id          string   `json:"id"`
+	DisplayName string   `json:"displayName"`
+	Members     []Member `json:"members"`
+	Meta        MetaT    `json:"meta"`
+}
+
+type Member struct {
+	Value   string `json:"value"`
+	Ref     string `json:"$ref"`
+	Display string `json:"display"`
+}
+
+type MetaT struct {
+	ResourceType string `json:"resourceType"`
+	Created      string `json:"created"`
+	LastModified string `json:"lastModified"`
+	Version      string `json:"version"`
+	Location     string `json:"location"`
 }
