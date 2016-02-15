@@ -1,0 +1,20 @@
+{
+  "schemas":["urn:scim:schemas:core:1.0"],
+  "id":"52ae1f8c-ff8b-dd32-ab40-2e8d6f5a06ed",
+  "userName":"bjensen",
+  "externalId":"bjensen",
+  "name":{
+    "formatted":"Ms. Barbara J Jensen III",
+    "familyName":"Jensen",
+    "givenName":"Barbara",
+    "middleName":"Jane"
+  },
+  "emails":[
+    {
+        "value":"bjensen@example.com"
+    },
+    {
+        "value":"babs@jensen.org"
+    }
+  ]
+}

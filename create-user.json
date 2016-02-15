@@ -1,0 +1,10 @@
+{
+  "schemas":["urn:scim:schemas:core:1.0"],
+  "userName":"bjensen",
+  "externalId":"bjensen",
+  "name":{
+    "formatted":"Ms. Barbara J Jensen III",
+    "familyName":"Jensen",
+    "givenName":"Barbara"
+  }
+}
