@@ -160,7 +160,7 @@ func createGroup(groupId string, b io.Reader) (group *types.Group, err error) {
 // Connect to the given MongoDB instance and return a pointer to the connection. DB will be
 // accessed through this pointer
 func NewMongoDS(url string) *mgo.Database {
-	fmt.Println("Connecting to MongoDB -", url)
+	log.Println("Trying to connect [MongoDB]-", url)
 	session, err := mgo.Dial(url)
 	if err != nil {
 		panic(err)
@@ -357,10 +357,11 @@ func init() {
 }
 
 func main() {
+	t0 := time.Now()
 	flag.Parse()
 
 	// Initialize server environment
-	log.Println(fmt.Sprintf("%s:%d", hostFlag, portFlag))
+	// log.Println(fmt.Sprintf("%s:%d", hostFlag, portFlag))
 	s := &SCIMServer{
 		// database instance
 		db: NewMongoDS(fmt.Sprintf("%s:%d", dbhostFlag, dbportFlag)),
@@ -368,6 +369,8 @@ func main() {
 
 	http.Handle("/", s)
 	address := fmt.Sprintf("%s:%d", hostFlag, portFlag)
-	log.Println("Server started", address)
+	t1 := time.Now()
+
+	log.Printf("Server started in %v\n", t1.Sub(t0))
 	log.Fatal(http.ListenAndServe(address, nil))
 }
