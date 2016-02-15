@@ -5,6 +5,7 @@ SCIM 2.0 spec implementation in Go. Still very much work in progress
 ### Implementation summary so far ###
 
 * /Users - GET, POST, PUT, DELETE
+* /Groups - GET, POST, PUT, DELETE
 
 ### How do I run this? ###
 
@@ -17,7 +18,7 @@ SCIM 2.0 spec implementation in Go. Still very much work in progress
 
 ### API calls ###
 
-## Users ##
+#### Users ####
 
 * Create user
 
@@ -35,7 +36,7 @@ curl -X PUT --data update-user.json http://localhost:8080/Users/52ae1f8c-ff8b-dd
 
 curl -X DELETE http://localhost:8080/Users/52ae1f8c-ff8b-dd32-ab40-2e8d6f5a06ed
 
-## Groups ##
+#### Groups ####
 
 * Create group
 
