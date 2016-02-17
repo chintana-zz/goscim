@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"bitbucket.org/chintana/goscim/types"
-	"bitbucket.org/chintana/goscim/util"
+	"github.com/chintana/goscim/types"
+	"github.com/chintana/goscim/util"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
